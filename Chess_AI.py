@@ -36,12 +36,13 @@ def findBestMove(gs, validMoves):
         gs.undoMove()
     return findRandomMove(bestPlayerMove)
 
-def findBestMoveMinMax(gs, validMoves):
+def findBestMoveInit(gs, validMoves):
     # Helper method to find first recursive call
     global nextMove
+    r.shuffle(validMoves)
     nextMove = None
-    findMoveMinMax(gs, validMoves, DEPTH, gs.whiteToMove)
-    return r.choice(nextMove)
+    findMoveNegativeMax(gs, validMoves, DEPTH, 1 if gs.whiteToMove else -1, -checkmate, checkmate)
+    return nextMove
 
 def findMoveMinMax(gs, validMoves, depth, whiteToMove):
     global nextMove
@@ -73,20 +74,39 @@ def findMoveMinMax(gs, validMoves, depth, whiteToMove):
             gs.undoMove()
         return minScore
 
+def findMoveNegativeMax(gs, validMoves, depth, turnMultiplier, alpha, beta):
+    global nextMove
+    if depth==0:
+        return turnMultiplier*scoreBoard(gs)
+    maxScore = -checkmate
+    for move in validMoves:
+        gs.makeMove(move)
+        nextMoves = gs.getValidMoves()
+        score = -findMoveNegativeMax(gs, nextMoves, depth-1, -turnMultiplier, -beta, -alpha)
+        if score>maxScore:
+            maxScore = score
+            if depth==DEPTH: nextMove = move
+        gs.undoMove()
+        if maxScore>alpha:
+            alpha = maxScore
+        if alpha>=beta:
+            break
+    return maxScore
+
 
 def scoreBoard(gs):
     if gs.checkmate:
         if gs.whtieToMove: return -checkmate # Black wins
         else: checkmate # White wins
     elif gs.stalemate: return stalemate
-
+    squareStength = [0.16, 0.18, 0.2, 0.22, 0.22, 0.2, 0.18, 0.16]
     score = 0
-    for row in gs.board:
-        for square in row:
-            if square[0]=="w":
-                score = score + pieceScore[square[1]]
-            elif square[0]=="b": score = score - pieceScore[square[1]]
-    return score
+    for row in range(len(gs.board)):
+        for square in range(len(gs.board[0])):
+            if gs.board[row][square][0]=="w":
+                score = score + pieceScore[gs.board[row][square][1]] + squareStength[row]*squareStength[square]
+            elif gs.board[row][square][0]=="b": score = score - pieceScore[gs.board[row][square][1]] - squareStength[row]*squareStength[square]
+    return round(score,5)
 
 
 def scoreMaterial(board):

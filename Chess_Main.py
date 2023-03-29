@@ -34,8 +34,8 @@ def main():
     boardChange = False #flag variable for when a move is made
     loadImages()
     running = True
-    playerOne = True # If a human is playing white this will be True, else False
-    playerTwo = False # If a human is plating black this will be True, else False
+    playerOne = False # If a human is playing white this will be True, else False
+    playerTwo = True # If a human is plating black this will be True, else False
     sqSelected = () # Keeps track of the last square selected (tuple: (row, col))
     playerClicks = [] # Keeps track of player clicks (two tuples: [(row, col), (newRow, newCol)])
     gameOver = False
@@ -83,7 +83,7 @@ def main():
                     animate = False
         # AI move finder
         if not gameOver and not humanTurn:
-            AIMove = Chess_AI.findBestMoveMinMax(gs, validMoves)
+            AIMove = Chess_AI.findBestMoveInit(gs, validMoves)
             if AIMove is None: AIMove = Chess_AI.findRandomMove(validMoves)
             gs.makeMove(AIMove)
             boardChange = True
