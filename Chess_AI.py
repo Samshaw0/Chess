@@ -96,7 +96,7 @@ def findMoveNegativeMax(gs, validMoves, depth, turnMultiplier, alpha, beta):
 
 def scoreBoard(gs):
     if gs.checkmate:
-        if gs.whtieToMove: return -checkmate # Black wins
+        if gs.whiteToMove: return -checkmate # Black wins
         else: checkmate # White wins
     elif gs.stalemate: return stalemate
     squareStength = [0.16, 0.18, 0.2, 0.22, 0.22, 0.2, 0.18, 0.16]

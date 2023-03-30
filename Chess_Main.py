@@ -86,6 +86,7 @@ def main():
             AIMove = Chess_AI.findBestMoveInit(gs, validMoves)
             if AIMove is None: AIMove = Chess_AI.findRandomMove(validMoves)
             gs.makeMove(AIMove)
+            print(AIMove.getChessNotation())
             boardChange = True
             animate = True
 
@@ -169,6 +170,10 @@ def animateMove(move, screen, board, clock, colours):
         p.draw.rect(screen, colour, endSquare)
         # Draw captured piece back onto ending square
         if move.pieceCaptured != "--":
+            if move.isEnPassantMove:
+                enPassantRow = move.endRow + 1 if pieceCaptured[0]=="b" else move.endRow-1
+                endSquare = p.Rect(move.endCol*SQ_SIZE, enPassantRow*SQ_SIZE, SQ_SIZE, SQ_SIZE)
+
             screen.blit(IMAGES[move.pieceCaptured], endSquare)
         # Draw moving pieces
         screen.blit(IMAGES[move.pieceMoved], p.Rect(col*SQ_SIZE, row*SQ_SIZE, SQ_SIZE, SQ_SIZE))
