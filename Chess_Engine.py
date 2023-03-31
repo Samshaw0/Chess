@@ -126,7 +126,7 @@ class GameState():
         if move.pieceCaptured == "wR":
             if move.endRow == 7:
                 if move.endCol == 0: self.currentCastleRights.wqs = False
-                elif move.endCol == 7: self.currentCastleRIghts.wks = False
+                elif move.endCol == 7: self.currentCastleRights.wks = False
             elif move.endRow == 0:
                 if move.endCol == 0: self.currentCastleRights.bqs = False
                 elif move.endCol == 7: self.currentCastleRights.bks = False
@@ -337,6 +337,7 @@ class Move():
         self.pieceCaptured = board[self.endRow][self.endCol]
         # Pawn Promotion
         self.isPawnPromotion = (self.pieceMoved == "wP" and self.endRow == 0) or (self.pieceMoved == "bP" and self.endRow == 7)
+        self.isCapture = self.pieceCaptured != "--"
 
         # En passant
         self.isEnPassantMove = isEnPassantMove
@@ -357,3 +358,21 @@ class Move():
 
     def getRankfile(self, row, col):
         return self.colsToFiles[col] + self.rowsToRanks[row]
+    
+    # Overing the str() function
+    def __str__(self):
+        # castle moves
+        if self.isCastleMove:
+            return "O-O" if self.endCol == 6 else "O-O-O"
+        
+        endSquare = self.getRankfile(self.endRow, self.endCol)
+        # pawn moves
+        if self.pieceMoved[1] == "P":
+            if self.isCapture:
+                return self.colsToFiles[self.startCol] + "x" + endSquare
+            else: return endSquare
+        #piece moves
+        moveString = self.pieceMoved[1]
+        if self.isCapture:
+            moveString+="x"
+        return moveString+endSquare
