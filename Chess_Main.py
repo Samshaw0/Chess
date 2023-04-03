@@ -37,7 +37,7 @@ def main():
     loadImages()
     running = True
     playerOne = False # If a human is playing white this will be True, else False
-    playerTwo = True # If a human is plating black this will be True, else False
+    playerTwo = False # If a human is plating black this will be True, else False
     sqSelected = () # Keeps track of the last square selected (tuple: (row, col))
     playerClicks = [] # Keeps track of player clicks (two tuples: [(row, col), (newRow, newCol)])
     gameOver = False
