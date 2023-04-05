@@ -40,11 +40,11 @@ def main():
     playerTwo = False # If a human is plating black this will be True, else False
     sqSelected = () # Keeps track of the last square selected (tuple: (row, col))
     playerClicks = [] # Keeps track of player clicks (two tuples: [(row, col), (newRow, newCol)])
-    gameOver = False
     colours = [p.Color("white"), p.Color("pink")]
     moveLogFont = p.font.SysFont("Arial", 16, False, False)
     while running:
         humanTurn = (gs.whiteToMove and playerOne) or (not gs.whiteToMove and playerTwo)
+        gameOver = gs.checkmate or gs.stalemate or gs.repetition
         for e in p.event.get():
             if e.type == p.QUIT:
                 running = False
@@ -108,7 +108,10 @@ def main():
                 drawEndGameText(screen, "White wins by checkmate")
         elif gs.stalemate:
             gameOver = True
-            drawEndGameText(screen, "Stalemate")
+            drawEndGameText(screen, "Draw by Stalemate")
+        elif gs.repetition:
+            gameOver = True
+            drawEndGameText(screen, "Draw by repetition")
 
         clock.tick(MAX_FPS)
         p.display.flip()

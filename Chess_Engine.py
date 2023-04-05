@@ -18,6 +18,7 @@ class GameState():
             ["wP", "wP", "wP", "wP", "wP", "wP", "wP", "wP"],
             ["wR", "wN", "wB", "wQ", "wK", "wB", "wN", "wR"]
         ]
+        self.boardLog = [hash("".join([piece for col in self.board for piece in col]))] # For finding repetitions
         self.moveLog = []
         self.whiteToMove = True
         self.moveFunctions = {"P":self.getPawnMoves, "R":self.getRookMoves, "N":self.getKnightMoves,
@@ -26,6 +27,7 @@ class GameState():
         self.blackKingLocation = (0,4)
         self.checkmate = False
         self.stalemate = False
+        self.repetition = False
         self.enPassantPossible = () # Coords for the square for en passant
         self.enPassantPossibleLog = [self.enPassantPossible]
         self.currentCastlingRights = CastleRights(True, True, True, True)
@@ -67,14 +69,15 @@ class GameState():
         self.updateCastleRights(move)
         self.castleRightsLog.append(CastleRights(self.currentCastlingRights.wks, self.currentCastlingRights.bks,
                                                 self.currentCastlingRights.wqs, self.currentCastlingRights.bqs))
-
-
+        #update board log
+        self.boardLog.append(hash("".join([piece for col in self.board for piece in col])))
 
 
 
     def undoMove(self):
         if len(self.moveLog) != 0:
             move = self.moveLog.pop()
+            self.boardLog.pop()
             self.board[move.startRow][move.startCol] = move.pieceMoved
             self.board[move.endRow][move.endCol] = move.pieceCaptured
             self.whiteToMove = not self.whiteToMove
@@ -101,6 +104,8 @@ class GameState():
                     self.board[move.endRow][move.endCol+1] = "--"
             self.checkmate = False
             self.stalemate = False
+            self.repetition = False
+            
 
         
     def updateCastleRights(self, move): 
@@ -151,6 +156,7 @@ class GameState():
                 moves.remove(moves[i])
             self.whiteToMove = not self.whiteToMove
             self.undoMove()
+            self.repetition = False
         if len(moves) == 0: # Checkmate or Stalemate
             if self.inCheck():
                 self.checkmate = True
@@ -158,7 +164,13 @@ class GameState():
                 self.stalemate = True
         else:
             self.checkmate = False # For undoing checkmate/stalemate when we undo moves
-            self.checkmate = False 
+            self.stalemate = False
+        #checks for draw by repetition
+        count = 0
+        for transposition in self.boardLog:
+            if transposition == self.boardLog[-1]: count+=1
+        if count>=3: self.repetition = True
+        else: self.repetition = False
 
         if self.whiteToMove:
             self.getCastleMoves(self.whiteKingLocation[0], self.whiteKingLocation[1], moves)
@@ -311,6 +323,7 @@ class GameState():
             return "w"
         else:
             return "b"
+        
 
 
 class CastleRights():

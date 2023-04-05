@@ -2,7 +2,6 @@ import random as r
 
 pieceScore = {"K":0, "P":1, "Q":9, "R":5, "B":3, "N":3}
 checkmate = 1000
-stalemate = 0
 DEPTH = 2
 
 def findRandomMove(validMoves):
@@ -17,13 +16,13 @@ def findBestMove(gs, validMoves):
         opponentMoves = gs.getValidMoves()
         opponentMaxScore = -checkmate
         if gs.checkmate: opponentMaxScore = -checkmate
-        elif gs.stalemate: opponentMaxScore = stalemate
+        elif gs.stalemate: opponentMaxScore = 0
         else:
             for opponentMove in opponentMoves:
                 gs.makeMove(opponentMove)
                 gs.getValidMoves()
                 if gs.checkmate: score = checkmate
-                elif gs.stalemate: score = stalemate
+                elif gs.stalemate: score = 0
                 else:
                     score = -turnMultiplier * scoreMaterial(gs.board)
                 if score > opponentMaxScore:
@@ -98,7 +97,8 @@ def scoreBoard(gs):
     if gs.checkmate:
         if gs.whiteToMove: return -checkmate # Black wins
         else: checkmate # White wins
-    elif gs.stalemate: return stalemate
+    elif gs.stalemate: return 0
+    elif gs.repetition: return 0
     squareStrength = [0.16, 0.18, 0.2, 0.22, 0.22, 0.2, 0.18, 0.16]
     score = 0
     numberOfPieces = 0
