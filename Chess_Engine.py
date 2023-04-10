@@ -18,7 +18,7 @@ class GameState():
             ["wP", "wP", "wP", "wP", "wP", "wP", "wP", "wP"],
             ["wR", "wN", "wB", "wQ", "wK", "wB", "wN", "wR"]
         ]
-        self.boardLog = [hash("".join([piece for col in self.board for piece in col]))] # For finding repetitions
+
         self.moveLog = []
         self.whiteToMove = True
         self.moveFunctions = {"P":self.getPawnMoves, "R":self.getRookMoves, "N":self.getKnightMoves,
@@ -33,6 +33,9 @@ class GameState():
         self.currentCastlingRights = CastleRights(True, True, True, True)
         self.castleRightsLog = [CastleRights(self.currentCastlingRights.wks, self.currentCastlingRights.bks,
                                             self.currentCastlingRights.wqs, self.currentCastlingRights.bqs)]
+        self.boardLog = [] # For finding repetitions
+        self.checkLog = [] # For move notations
+        
 
 # Takes a move as a parameter and executes it (doesn't work for en-passant, promotions, castling)
     def makeMove(self, move):
@@ -70,7 +73,13 @@ class GameState():
         self.castleRightsLog.append(CastleRights(self.currentCastlingRights.wks, self.currentCastlingRights.bks,
                                                 self.currentCastlingRights.wqs, self.currentCastlingRights.bqs))
         #update board log
-        self.boardLog.append(hash("".join([piece for col in self.board for piece in col])))
+        self.boardLog.append(hash("".join([piece for col in self.board for piece in col])
+                              + "".join([str(i) for i in self.currentCastlingRights.__dict__.values()])
+                              + "".join([str(i) for i in self.enPassantPossible]))) # For finding repetitions
+        #update check log
+        self.checkLog.append(True if self.inCheck() else False)
+
+        
 
 
 
@@ -105,6 +114,7 @@ class GameState():
             self.checkmate = False
             self.stalemate = False
             self.repetition = False
+            self.checkLog.pop()
             
 
         
@@ -358,8 +368,8 @@ class Move():
             self.pieceCaptured = "wP" if self.pieceMoved == "bP" else "bP"
         #Castling
         self.isCastleMove = isCastleMove
-
         self.moveId = self.startRow*1000 + self.startCol*100 + self.endRow*10 + self.endCol
+
         # Overiding equals methods
     def __eq__(self, other):
         if isinstance(other, Move):
@@ -373,7 +383,7 @@ class Move():
         return self.colsToFiles[col] + self.rowsToRanks[row]
     
     # Overing the str() function
-    def __str__(self):
+    def moveNotation(self, inCheck):
         # castle moves
         if self.isCastleMove:
             return "O-O" if self.endCol == 6 else "O-O-O"
@@ -382,10 +392,14 @@ class Move():
         # pawn moves
         if self.pieceMoved[1] == "P":
             if self.isCapture:
-                return self.colsToFiles[self.startCol] + "x" + endSquare
-            else: return endSquare
+                moveString = self.colsToFiles[self.startCol] + "x" + endSquare
+            else: moveString = endSquare
         #piece moves
-        moveString = self.pieceMoved[1]
-        if self.isCapture:
-            moveString+="x"
-        return moveString+endSquare
+        else:
+            moveString = self.pieceMoved[1]
+            if self.isCapture:
+                moveString+="x"
+            moveString+=endSquare
+        if inCheck:
+            moveString+="+"
+        return moveString

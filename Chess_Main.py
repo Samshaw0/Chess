@@ -36,8 +36,8 @@ def main():
     boardChange = False #flag variable for when a move is made
     loadImages()
     running = True
-    playerOne = False # If a human is playing white this will be True, else False
-    playerTwo = False # If a human is plating black this will be True, else False
+    playerOne = True # If a human is playing white this will be True, else False
+    playerTwo = True # If a human is plating black this will be True, else False
     sqSelected = () # Keeps track of the last square selected (tuple: (row, col))
     playerClicks = [] # Keeps track of player clicks (two tuples: [(row, col), (newRow, newCol)])
     colours = [p.Color("white"), p.Color("pink")]
@@ -148,25 +148,24 @@ def drawMoveLog(screen, gs, font):
     moveLogRect = p.Rect(boardWidth, 0, moveLogPanelWidth, moveLogPanelHeight)
     p.draw.rect(screen, p.Color("black"), moveLogRect)
     moveLog = gs.moveLog
+    while len(moveLog)>50: moveLog.pop(0)
     moveTexts = []
     for i in range(0, len(moveLog), 2):
-        moveString = str(i//2 + 1) + ". " + str(moveLog[i]) + " "
+        moveTexts.append(str(i//2 + 1) + ". " + moveLog[i].moveNotation(gs.checkLog[i]))
         if i+1 < len(moveLog):
-            moveString += str(moveLog[i+1]) + "      "
-        moveTexts.append(moveString)
-    padding = 5
-    textY = padding
+            moveTexts[-1] += " " + moveLog[i+1].moveNotation(gs.checkLog[i+1])
+    border_padding = 5
+    moveLog_padding = 120
+    textY = border_padding
     lineSpacing = 2
     movesPerRow = 2
-    for i in range(0, len(moveTexts), movesPerRow):
-        text = ""
-        for j in range(movesPerRow):
-            if i+j < len(moveTexts):
-                text+=moveTexts[i+j]
+    if gs.checkmate: moveTexts[-1] = moveTexts[-1][:-1] + "#"
+    for i in range(0, len(moveTexts)):
+        text = moveTexts[i]
         textObject = font.render(text, True, p.Color("White"))
-        textLocation = moveLogRect.move(padding, textY)
+        textLocation = moveLogRect.move(border_padding + moveLog_padding*(i%movesPerRow), textY)
         screen.blit(textObject, textLocation)
-        textY += textObject.get_height() + lineSpacing
+        textY += (textObject.get_height() + lineSpacing) if (i+1)%movesPerRow==0 else 0
 
 # Draws squares on board
 def drawBoard(screen, colours):
