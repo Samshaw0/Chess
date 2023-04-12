@@ -1,8 +1,8 @@
 import random as r
-
+from functools import lru_cache
 pieceScore = {"K":0, "P":1, "Q":9, "R":5, "B":3, "N":3}
 checkmate = 1000
-DEPTH = 2
+DEPTH = 4
 
 def findRandomMove(validMoves):
     return r.choice(validMoves)
@@ -38,9 +38,8 @@ def findBestMove(gs, validMoves):
 def findBestMoveInit(gs, validMoves):
     # Helper method to find first recursive call
     global nextMove
-    r.shuffle(validMoves)
     nextMove = None
-    findMoveNegativeMax(gs, validMoves, DEPTH, 1 if gs.whiteToMove else -1, -checkmate, checkmate)
+    findMoveNegativeMax(gs, tuple(validMoves), DEPTH, 1 if gs.whiteToMove else -1, -checkmate, checkmate)
     return nextMove
 
 def findMoveMinMax(gs, validMoves, depth, whiteToMove):
@@ -73,6 +72,7 @@ def findMoveMinMax(gs, validMoves, depth, whiteToMove):
             gs.undoMove()
         return minScore
 
+@lru_cache(maxsize=10000000)
 def findMoveNegativeMax(gs, validMoves, depth, turnMultiplier, alpha, beta):
     global nextMove
     if depth==0:
@@ -80,7 +80,7 @@ def findMoveNegativeMax(gs, validMoves, depth, turnMultiplier, alpha, beta):
     maxScore = -checkmate
     for move in validMoves:
         gs.makeMove(move)
-        nextMoves = gs.getValidMoves()
+        nextMoves = tuple(gs.getValidMoves())
         score = -findMoveNegativeMax(gs, nextMoves, depth-1, -turnMultiplier, -beta, -alpha)
         if score>maxScore:
             maxScore = score

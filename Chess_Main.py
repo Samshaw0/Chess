@@ -37,7 +37,7 @@ def main():
     loadImages()
     running = True
     playerOne = True # If a human is playing white this will be True, else False
-    playerTwo = True # If a human is plating black this will be True, else False
+    playerTwo = False # If a human is plating black this will be True, else False
     sqSelected = () # Keeps track of the last square selected (tuple: (row, col))
     playerClicks = [] # Keeps track of player clicks (two tuples: [(row, col), (newRow, newCol)])
     colours = [p.Color("white"), p.Color("pink")]
@@ -83,6 +83,10 @@ def main():
                     playerClicks = []
                     boardChange = False
                     animate = False
+
+
+                if e.key == p.K_RETURN: # temporary stop line remove later
+                    running = False
         # AI move finder
         if not gameOver and not humanTurn:
             AIMove = Chess_AI.findBestMoveInit(gs, validMoves)
@@ -215,5 +219,15 @@ def drawEndGameText(screen, text):
     textLocation = p.Rect(0, 0, boardHeight, boardHeight).move(boardWidth/2 - textObject.get_width()/2, boardHeight/2 - textObject.get_height()/2)
     screen.blit(textObject, textLocation)
 
-main()
+import cProfile
+cProfile.run("main()", "output.dat")
+
+import pstats
+from pstats import SortKey
+with open("output_time.txt", "w") as f:
+    p = pstats.Stats("output.dat", stream=f)
+    p.sort_stats("time").print_stats()
+with open("output_calls.txt", "w") as f:
+    p = pstats.Stats("output.dat", stream=f)
+    p.sort_stats("calls").print_stats()
 

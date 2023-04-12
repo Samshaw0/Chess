@@ -1,8 +1,6 @@
 # This class is responsible for storing all the information about the current state of a chess game.
 # It will also be responsible for determining the valid moves in the current position.
 # It will also keep a move log.
-
-
 class GameState():
     def __init__(self):
         # The board is an 8x8 2 dimensional list. Each element of the list has 2 characters
@@ -36,8 +34,18 @@ class GameState():
         self.boardLog = [] # For finding repetitions
         self.checkLog = [] # For move notations
         
+    def __hash__(self):
+        properties = [self.checkmate, self.stalemate, self.repetition]
+        properties.append(tuple(map(tuple, self.board)))
+        properties.append(self.currentCastlingRights)
+        properties.append(self.whiteToMove)
+        properties.append(self.enPassantPossible)
+        return hash(tuple(properties))
 
-# Takes a move as a parameter and executes it (doesn't work for en-passant, promotions, castling)
+
+
+
+# Takes a move as a parameter and executes it
     def makeMove(self, move):
         self.board[move.startRow][move.startCol] = "--"
         self.board[move.endRow][move.endCol] = move.pieceMoved
@@ -167,6 +175,12 @@ class GameState():
             self.whiteToMove = not self.whiteToMove
             self.undoMove()
             self.repetition = False
+
+        if self.whiteToMove:
+            moves = self.getCastleMoves(self.whiteKingLocation[0], self.whiteKingLocation[1], moves)
+        else:
+            moves = self.getCastleMoves(self.blackKingLocation[0], self.blackKingLocation[1], moves)
+
         if len(moves) == 0: # Checkmate or Stalemate
             if self.inCheck():
                 self.checkmate = True
@@ -181,12 +195,6 @@ class GameState():
             if transposition == self.boardLog[-1]: count+=1
         if count>=3: self.repetition = True
         else: self.repetition = False
-
-        if self.whiteToMove:
-            self.getCastleMoves(self.whiteKingLocation[0], self.whiteKingLocation[1], moves)
-        else:
-            self.getCastleMoves(self.blackKingLocation[0], self.blackKingLocation[1], moves)
-
 
         self.enPassantPossible = tempEnPassantPossible
         self.currentCastleRights = tempCastleRights
@@ -218,11 +226,11 @@ class GameState():
                 turn = self.board[row][col][0] # Accesses the first character of the item in the square
                 if (turn == 'w' and self.whiteToMove) or (turn == 'b' and not self.whiteToMove):
                     piece = self.board[row][col][1]
-                    self.moveFunctions[piece](row, col, moves)
-
+                    moves = self.moveFunctions[piece](row, col, tuple(moves))
         return moves
 
     def getPawnMoves(self, row, col, moves):
+        moves = list(moves)
         if self.whiteToMove:
             if self.board[row-1][col] == "--":
                 moves.append(Move((row, col), (row-1, col), self.board))
@@ -231,14 +239,14 @@ class GameState():
                         moves.append(Move((row, col), (row-2, col), self.board))
             if col-1 >= 0:
                 if self.board[row-1][col-1][0] == "b":
-                    moves.append(Move((row, col), (row-1, col-1), self.board))
+                    moves.insert(0, Move((row, col), (row-1, col-1), self.board))
                 elif (row-1, col-1) == self.enPassantPossible:
-                    moves.append(Move((row, col), (row-1, col-1), self.board, isEnPassantMove = True))
+                    moves.insert(0, Move((row, col), (row-1, col-1), self.board, isEnPassantMove = True))
             if col+1 <= 7:
                 if self.board[row-1][col+1][0] == "b":
-                    moves.append(Move((row, col), (row-1, col+1), self.board))
+                    moves.insert(0, Move((row, col), (row-1, col+1), self.board))
                 elif (row-1, col+1) == self.enPassantPossible:
-                    moves.append(Move((row, col), (row-1, col+1), self.board, isEnPassantMove = True))
+                    moves.insert(0, Move((row, col), (row-1, col+1), self.board, isEnPassantMove = True))
         else:
             if self.board[row+1][col] == "--":
                 moves.append(Move((row, col), (row+1, col), self.board))
@@ -247,92 +255,106 @@ class GameState():
                         moves.append(Move((row, col), (row+2, col), self.board))
             if col-1 >= 0:
                 if self.board[row+1][col-1][0] == "w":
-                    moves.append(Move((row, col), (row+1, col-1), self.board))
+                    moves.insert(0, Move((row, col), (row+1, col-1), self.board))
                 elif (row+1, col-1) == self.enPassantPossible:
-                    moves.append(Move((row, col), (row+1, col-1), self.board, isEnPassantMove = True))
+                    moves.insert(0, Move((row, col), (row+1, col-1), self.board, isEnPassantMove = True))
             if col+1 <= 7:
                 if self.board[row+1][col+1][0] == "w":
-                    moves.append(Move((row, col), (row+1, col+1), self.board))
+                    moves.insert(0, Move((row, col), (row+1, col+1), self.board))
                 elif (row+1, col+1) == self.enPassantPossible:
-                    moves.append(Move((row, col), (row+1, col+1), self.board, isEnPassantMove = True))
+                    moves.insert(0, Move((row, col), (row+1, col+1), self.board, isEnPassantMove = True))
+        return moves
 
     def getRookMoves(self, row, col, moves):
+        moves = list(moves)
         coords = [[1,0],[0,-1],[-1,0],[0,1]]
-        cannotCaptureColour = self.whiteOrBlack(self.whiteToMove)
-        canCaptureColour  = self.whiteOrBlack(not self.whiteToMove)
+        cannotCaptureColour = "w" if self.whiteToMove else "b"
+        canCaptureColour  = "b" if self.whiteToMove else "w"
         for i in range(len(coords)):
             for multiplier in range(1, len(self.board)+1):
                 pos = [row+(coords[i][0]*multiplier), col+(coords[i][1]*multiplier)]
                 if pos[0] < 0 or pos[0] > 7 or pos[1] < 0 or pos[1] > 7 or self.board[pos[0]][pos[1]][0] == cannotCaptureColour:
                     break
                 elif self.board[pos[0]][pos[1]][0] == canCaptureColour:
-                    moves.append(Move((row, col), (pos[0], pos[1]), self.board))
+                    moves.insert(0, Move((row, col), (pos[0], pos[1]), self.board))
                     break
                 else:
                     moves.append(Move((row, col), (pos[0], pos[1]), self.board))
+        return moves
 
     def getKnightMoves(self, row, col, moves):
+        moves = list(moves)
         coords = [[1,2],[2,1],[1,-2],[-2,1],[-1,2],[2,-1],[-2,-1],[-1,-2]]
-        cannotCaptureColour = self.whiteOrBlack(self.whiteToMove) 
+        cannotCaptureColour = "w" if self.whiteToMove else "b"
         for i in range(len(coords)):
             if col+coords[i][1] <= 7 and col+coords[i][1] >= 0:
                 if row+coords[i][0] <= 7 and row+coords[i][0] >= 0:
-                    if self.board[row + coords[i][0]][col + coords[i][1]][0] != cannotCaptureColour:
+                    colour = self.board[row + coords[i][0]][col + coords[i][1]][0]
+                    if colour == "-":
                         moves.append(Move((row, col), (row+coords[i][0], col+coords[i][1]), self.board))
+                    elif colour != cannotCaptureColour:
+                        moves.insert(0, Move((row, col), (row+coords[i][0], col+coords[i][1]), self.board))
+        return moves
+
     def getBishopMoves(self, row, col, moves):
+        moves = list(moves)
         coords = [[1,1],[1,-1],[-1,1],[-1,-1]]
-        cannotCaptureColour = self.whiteOrBlack(self.whiteToMove)
-        canCaptureColour  = self.whiteOrBlack(not self.whiteToMove)
+        cannotCaptureColour = "w" if self.whiteToMove else "b"
+        canCaptureColour  = "b" if self.whiteToMove else "w"
         for i in range(len(coords)):
             for multiplier in range(1, len(self.board)+1):
                 pos = [row+(coords[i][0]*multiplier), col+(coords[i][1]*multiplier)]
                 if pos[0] < 0 or pos[0] > 7 or pos[1] < 0 or pos[1] > 7 or self.board[pos[0]][pos[1]][0] == cannotCaptureColour:
                     break
                 elif self.board[pos[0]][pos[1]][0] == canCaptureColour:
-                    moves.append(Move((row, col), (pos[0], pos[1]), self.board))
+                    moves.insert(0, Move((row, col), (pos[0], pos[1]), self.board))
                     break
                 else:
                     moves.append(Move((row, col), (pos[0], pos[1]), self.board))
+        return moves
 
     def getQueenMoves(self, row, col, moves):
-        self.getRookMoves(row, col, moves)
-        self.getBishopMoves(row, col, moves)
+        moves = self.getRookMoves(row, col, moves)
+        moves = self.getBishopMoves(row, col, tuple(moves))
+        return moves
 
     def getKingMoves(self, row, col, moves):
+        moves = list(moves)
         coords = [[1,0],[1,1],[1,-1],[-1,0],[-1,-1],[-1,1],[0,-1],[0,1]]
-        cannotCaptureColour = self.whiteOrBlack(self.whiteToMove)
+        cannotCaptureColour = "w" if self.whiteToMove else "b"
         for i in range(len(coords)):
             if col+coords[i][1] <= 7 and col+coords[i][1] >= 0:
                 if row+coords[i][0] <= 7 and row+coords[i][0] >= 0:
                     if self.board[row + coords[i][0]][col + coords[i][1]][0] != cannotCaptureColour:
                         moves.append(Move((row, col), (row+coords[i][0], col+coords[i][1]), self.board))
+        return moves
 
     def getCastleMoves(self, row, col, moves):
+        moves = list(moves)
         if self.inCheck():
-            return # can't castle when in check
+            return moves # can't castle when in check
         if self.whiteToMove and self.currentCastlingRights.wks or (not self.whiteToMove and self.currentCastlingRights.bks):
-            self.getKingSideCastleMoves(row, col, moves)
+            moves = self.getKingSideCastleMoves(row, col, moves)
         if self.whiteToMove and self.currentCastlingRights.wqs or (not self.whiteToMove and self.currentCastlingRights.bqs):
-            self.getQueenSideCastleMoves(row, col, moves)
-        
+            moves = self.getQueenSideCastleMoves(row, col, moves)
+        return moves
 
     def getKingSideCastleMoves(self, row, col, moves):
+        moves = list(moves)
         if self.board[row][col+1]=="--" and self.board[row][col+2]=="--":
             if not self.squareUnderAttack(row, col+1) and not self.squareUnderAttack(row, col+2):
                 moves.append(Move((row, col), (row, col+2), self.board, isCastleMove=True))
+        return moves
 
             
 
     def getQueenSideCastleMoves(self, row, col, moves):
+        moves = list(moves)
         if self.board[row][col-1]=="--" and self.board[row][col-2]=="--" and self.board[row][col-2]=="--":
             if not self.squareUnderAttack(row, col-1) and not self.squareUnderAttack(row, col-2):
                 moves.append(Move((row, col), (row, col-2), self.board, isCastleMove=True))
+        return moves
 
-    def whiteOrBlack(self, wOrB):
-        if wOrB:
-            return "w"
-        else:
-            return "b"
         
 
 
@@ -342,6 +364,9 @@ class CastleRights():
         self.bks = bks
         self.wqs = wqs
         self.bqs = bqs
+
+    def __hash__(self):
+        return hash(tuple([self.wks, self.bks, self.wqs, self.bqs]))
 
 
 class Move():
@@ -360,7 +385,6 @@ class Move():
         self.pieceCaptured = board[self.endRow][self.endCol]
         # Pawn Promotion
         self.isPawnPromotion = (self.pieceMoved == "wP" and self.endRow == 0) or (self.pieceMoved == "bP" and self.endRow == 7)
-        self.isCapture = self.pieceCaptured != "--"
 
         # En passant
         self.isEnPassantMove = isEnPassantMove
@@ -368,12 +392,11 @@ class Move():
             self.pieceCaptured = "wP" if self.pieceMoved == "bP" else "bP"
         #Castling
         self.isCastleMove = isCastleMove
-        self.moveId = self.startRow*1000 + self.startCol*100 + self.endRow*10 + self.endCol
 
-        # Overiding equals methods
+    # Overiding equals methods
     def __eq__(self, other):
         if isinstance(other, Move):
-            return self.moveId == other.moveId
+            return 1000*self.startRow+100*self.startCol+10*self.endRow+self.endCol == 1000*other.startRow+100*other.startCol+10*other.endRow+other.endCol
         return False
 
     def getChessNotation(self):
@@ -391,15 +414,24 @@ class Move():
         endSquare = self.getRankfile(self.endRow, self.endCol)
         # pawn moves
         if self.pieceMoved[1] == "P":
-            if self.isCapture:
+            if self.pieceCaptured != "--":
                 moveString = self.colsToFiles[self.startCol] + "x" + endSquare
             else: moveString = endSquare
         #piece moves
         else:
             moveString = self.pieceMoved[1]
-            if self.isCapture:
+            if self.pieceCaptured != "--":
                 moveString+="x"
             moveString+=endSquare
         if inCheck:
             moveString+="+"
         return moveString
+    
+    def __hash__(self):
+        properties = [self.startRow, self.startCol, self.endRow, self.endCol]
+        properties.append(self.pieceMoved)
+        properties.append(self.pieceCaptured)
+        properties.append(self.isPawnPromotion)
+        properties.append(self.isEnPassantMove)
+        properties.append(self.isCastleMove)
+        return (hash(tuple(properties)))
