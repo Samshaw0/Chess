@@ -2,95 +2,24 @@ import random as r
 from functools import lru_cache
 pieceScore = {"K":0, "P":1, "Q":9, "R":5, "B":3, "N":3}
 checkmate = 1000
-DEPTH = 4
 
 def findRandomMove(validMoves):
     return r.choice(validMoves)
 
-def findBestMove(gs, validMoves):
-    turnMultiplier = 1 if gs.whiteToMove else -1
-    opponentMinMaxScore = checkmate
-    bestPlayerMove = None
-    for playerMove in validMoves:
-        gs.makeMove(playerMove)
-        opponentMoves = gs.getValidMoves()
-        opponentMaxScore = -checkmate
-        if gs.checkmate: opponentMaxScore = -checkmate
-        elif gs.stalemate: opponentMaxScore = 0
-        else:
-            for opponentMove in opponentMoves:
-                gs.makeMove(opponentMove)
-                gs.getValidMoves()
-                if gs.checkmate: score = checkmate
-                elif gs.stalemate: score = 0
-                else:
-                    score = -turnMultiplier * scoreMaterial(gs.board)
-                if score > opponentMaxScore:
-                    opponentMaxScore = score
-                gs.undoMove()
-        if opponentMinMaxScore > opponentMaxScore:
-            opponentMinMaxScore = opponentMaxScore
-            bestPlayerMove = [playerMove]
-        elif opponentMinMaxScore == opponentMaxScore: bestPlayerMove.append(playerMove)
-        gs.undoMove()
-    return findRandomMove(bestPlayerMove)
-
-def findBestMoveInit(gs, validMoves):
-    # Helper method to find first recursive call
-    global nextMove
-    nextMove = None
-    findMoveNegativeMax(gs, tuple(validMoves), DEPTH, 1 if gs.whiteToMove else -1, -checkmate, checkmate)
-    return nextMove
-
-def findMoveMinMax(gs, validMoves, depth, whiteToMove):
-    global nextMove
-    if depth == 0:
-        return scoreMaterial(gs.board)
-    if whiteToMove:
-        maxScore = -checkmate
-        for move in validMoves:
-            gs.makeMove(move)
-            nextMoves = gs.getValidMoves()
-            score = findMoveMinMax(gs, nextMoves, depth-1, not whiteToMove)
-            if score > maxScore: 
-                maxScore = score
-                if depth == DEPTH: nextMove = [move]
-            elif score==maxScore and depth==DEPTH: nextMove.append(move)
-            gs.undoMove()
-        return maxScore
-    else:
-        minScore = checkmate
-        for move in validMoves:
-            gs.makeMove(move)
-            nextMoves = gs.getValidMoves()
-            score = findMoveMinMax(gs, nextMoves, depth-1, whiteToMove)
-            if score < minScore:
-                minScore = score
-                if depth==DEPTH: nextMove = [move]
-            elif score == minScore and depth==DEPTH:
-                nextMove.append(move)
-            gs.undoMove()
-        return minScore
-
-@lru_cache(maxsize=10000000)
-def findMoveNegativeMax(gs, validMoves, depth, turnMultiplier, alpha, beta):
-    global nextMove
-    if depth==0:
-        return turnMultiplier*scoreBoard(gs)
-    maxScore = -checkmate
-    for move in validMoves:
-        gs.makeMove(move)
-        nextMoves = tuple(gs.getValidMoves())
-        score = -findMoveNegativeMax(gs, nextMoves, depth-1, -turnMultiplier, -beta, -alpha)
-        if score>maxScore:
-            maxScore = score
-            if depth==DEPTH: nextMove = move
-        gs.undoMove()
-        if maxScore>alpha:
-            alpha = maxScore
-        if alpha>=beta:
-            break
-    return maxScore
+def findBestMove():
+    root = node(None, [], None, None)
+    root.developTree(validMoves, gs) #builds the intial tree
+    for i in range(100):
+        makeMoveCount = 0
+        move = root.findBestMove()
+        while len(move.children)!=0:
+            gs.makeMove(move.move)
+            makeMoveCount += 1
+            move = move.findBestMove()
+            move.developTree(gs.getValidMoves(), gs)
+            for j in range(makeMoveCount): gs.undoMove()            
+    
+    return root.findBestMove().move
 
 
 def scoreBoard(gs):
@@ -137,3 +66,49 @@ def pawnChain(board, square, whiteToMove): # Enter square as a tuple
             if board[coord[0]][coord[1]] == ("w" if whiteToMove else "b") + "P":
                 numberOfChains+=1
     return numberOfChains
+
+class node():
+    def __init__(self, parent, children, score, move):
+        self.parent = parent
+        self.children = children
+        self.score = score
+        self.move = move
+        
+    def developTree(self, validMoves, gs): # need to do the + and - for b/w
+        maxMoveScore = -9999999
+        for move in validMoves:
+            gs.makeMove(move)
+            score = scoreBoard(gs)
+            gs.undoMove()
+            self.children.append(node(self, [], score, move))
+            if score>maxMoveScore: maxMoveScore = score
+        self.score = maxMoveScore
+
+    def findBestMove(self):
+        maxMove = self.children[0]
+        for move in self.children:
+            if move.score > maxMove.score: maxMove=move
+        return maxMove
+            
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

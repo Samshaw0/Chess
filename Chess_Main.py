@@ -89,7 +89,7 @@ def main():
                     running = False
         # AI move finder
         if not gameOver and not humanTurn:
-            AIMove = Chess_AI.findBestMoveInit(gs, validMoves)
+            AIMove = Chess_AI.findBestMove(gs, validMoves)
             if AIMove is None: AIMove = Chess_AI.findRandomMove(validMoves)
             gs.makeMove(AIMove)
             boardChange = True
